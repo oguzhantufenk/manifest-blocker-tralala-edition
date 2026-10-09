@@ -66,7 +66,7 @@ async function test(name,fn){if(process.argv[2]&&!name.includes(process.argv[2])
   const alerts=[];f.page.on('dialog',async d=>{alerts.push(d.message());await d.dismiss();});
   await f.page.evaluate(code);assert.equal(await f.page.evaluate(()=>ManifestBlocker.version),'1.0.0');assert.equal(alerts.length,1);
   await f.page.evaluate(()=>{const current=ManifestBlocker;window.manifestblocker=window.ManifestBlocker={...current,status:()=>({busy:false}),dismiss:()=>{current.dismiss();delete window.ManifestBlocker;delete window.manifestblocker;}};});
-  await f.page.evaluate(code);await idle(f.page);assert.equal(await f.page.evaluate(()=>ManifestBlocker.version),'2.0.1');
+  await f.page.evaluate(code);await idle(f.page);assert.equal(await f.page.evaluate(()=>ManifestBlocker.version),'2.0.2');
   assert.equal(await f.page.locator('#manifest-blocker-panel').count(),1);assert.deepEqual(f.errors,[]);await f.context.close();
  });
  for(const transport of ['fetch','xhr'])await test(transport+' confirmed save + settings + cleanup',async()=>{
@@ -103,7 +103,7 @@ async function test(name,fn){if(process.argv[2]&&!name.includes(process.argv[2])
   assert.equal(await f.page.locator('#manifest-blocker-panel .eyebrow').textContent(),'tralala edition');
   assert.equal(await f.page.locator('#manifest-blocker-panel .mark').count(),0);
   assert.equal(await f.page.locator('#manifest-blocker-panel .primary').evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(255, 176, 136)');
-  assert.equal(await f.page.evaluate(()=>manifestblocker.version),'2.0.1');await f.context.close();
+  assert.equal(await f.page.evaluate(()=>manifestblocker.version),'2.0.2');await f.context.close();
  });
  for(const cfg of [{response:{errors:[{message:'Denied'}]},optimistic:true},{response:{success:true}},{badJson:true},{noDom:true},{http:500}])await test('No false success '+JSON.stringify(cfg),async()=>{
   const f=await setup({existing:[],...cfg});await idle(f.page);await selected(f.page,['manifest grubu','manifest edit']);

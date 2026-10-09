@@ -15,7 +15,7 @@ ilk tarama kendiliğinden başlar; başlat düğmesine basılmadan kelime kayded
 
 ## neler var?
 
-- manifest ile ilgili 33 kelime; mevcut kayıtları tespit edip atlama.
+- manifest ile ilgili 34 kelime; mevcut kayıtları tespit edip atlama.
 - sanal listeleri kaydırarak okuma; tanınmayan veya kısmi listede durma.
 - kaydetme isteğinin sunucu yanıtını ve kelimenin x listesinde görünmesini birlikte doğrulama.
 - her 10 doğrulanmış yeni kayıttan sonra 60 saniye ara; kelimeler arasında en az 2 saniye.

@@ -1,6 +1,6 @@
 {
   "name": "manifest-blocker-tralala-edition",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "private": true,
   "description": "manifest blocker: tralala edition — a small console overlay for x muted words",
   "scripts": {
