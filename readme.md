@@ -15,7 +15,7 @@ ilk tarama kendiliğinden başlar; başlat düğmesine basılmadan kelime kayded
 
 ## neler var?
 
-- manifest ile ilgili 31 kelime; mevcut kayıtları tespit edip atlama.
+- manifest ile ilgili 33 kelime; mevcut kayıtları tespit edip atlama.
 - sanal listeleri kaydırarak okuma; tanınmayan veya kısmi listede durma.
 - kaydetme isteğinin sunucu yanıtını ve kelimenin x listesinde görünmesini birlikte doğrulama.
 - her 10 doğrulanmış yeni kayıttan sonra 60 saniye ara; kelimeler arasında en az 2 saniye.
@@ -24,6 +24,10 @@ ilk tarama kendiliğinden başlar; başlat düğmesine basılmadan kelime kayded
 - tamamen küçük harfli metinler; logosuz, kömür grisi ve sıcak turuncu arayüz.
 
 `manifest`, `toz pembe` gibi geniş eşleşen kelimeler başlangıçta seçili değildir. **eksikleri seç** bunları da seçer. yalnızca tam kelime/ifade eşleşmeleri mevcut sayılır.
+
+## v2.0.1
+
+`takış` ve `tolga akış` kelimeleri listeye eklendi.
 
 ## v2.0.0 düzeltmesi
 

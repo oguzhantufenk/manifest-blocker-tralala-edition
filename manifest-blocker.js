@@ -4,7 +4,7 @@
   // https://x.com/settings/muted_keywords açıkken Console'a tamamını yapıştırın.
   const KEY = 'manifest-blocker:v1';
   const ROOT_ID = 'manifest-blocker-panel';
-  const VERSION = '2.0.0';
+  const VERSION = '2.0.1';
   const lower = value => String(value ?? '').toLocaleLowerCase('tr-TR');
   const notifyUser = message => window.alert(lower(message));
   if (!/^(www\.)?(x|twitter)\.com$/.test(location.hostname) ||
@@ -34,7 +34,7 @@
     'zoktay', 'zamansızdık', 'arıyo', 'yaşanacaksa', 'manifestival deluxe',
     'başrol sensin', 'toz pembe', 'manifesttr', 'manifest türkiye', 'manifest turkiye',
     'manifest edit', 'manifest fancam', 'manifest konser', 'manifest kızları',
-    'manifest kizlari', 'manifest fandom'
+    'manifest kizlari', 'manifest fandom', 'takış', 'tolga akış'
   ];
   const BROAD = new Set(['manifest', 'zamansızdık', 'arıyo', 'yaşanacaksa', 'başrol sensin', 'toz pembe']);
   // X değişirse güncellenebilecek, dar kapsamlı işaretler. Rastgele düğmelere tıklanmaz.
