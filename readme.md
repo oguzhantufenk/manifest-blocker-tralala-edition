@@ -77,6 +77,12 @@ liste satırları ve ingilizce süre etiketi gerçek x ekranında salt okunur in
 
 bu araç kelimeleri sessize alır; hesap engellemez. [x’in açıklamasına göre](https://help.x.com/en/using-x/advanced-x-mute-options) arama sonuçları sessize alma kapsamı dışındadır. önizleme örnek veri içerir.
 
+## vercel’de yayınla
+
+github deposunu vercel’e aktar; kök dizini depo kökü (`./`) olarak bırak. `vercel.json`, derleme komutunu ve yayın klasörünü otomatik ayarlar. ortam değişkeni gerekmez. daha önce aktarılmış projede `main` dalına yapılan güncellemeler yeni dağıtımı başlatır.
+
+`npm run build`, yayınlanacak `dist/index.html` ve `dist/manifest-blocker.js` dosyalarını üretir. bağımlılık kurulumu atlanır; derleme yalnızca node.js’in yerleşik modüllerini kullanır. yerelde açılabilen kök `index.html` de aynı içerikle güncellenir.
+
 ## geliştirme
 
 node.js 20 veya daha yeni bir sürüm gerekir. scripti kullanmak için bu adımlar gerekli değildir.
