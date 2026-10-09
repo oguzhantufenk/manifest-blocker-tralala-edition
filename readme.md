@@ -25,16 +25,6 @@ ilk tarama kendiliğinden başlar; başlat düğmesine basılmadan kelime kayded
 
 `manifest`, `toz pembe` gibi geniş eşleşen kelimeler başlangıçta seçili değildir. **eksikleri seç** bunları da seçer. yalnızca tam kelime/ifade eşleşmeleri mevcut sayılır.
 
-## v2.0.1
-
-`takış` ve `tolga akış` kelimeleri listeye eklendi.
-
-## v2.0.0 düzeltmesi
-
-ingilizce x formunda süresiz seçeneği **“until you unmute the word”** olarak gösteriliyor. bu etiket, “until you unmute this word”, “forever” ve türkçe karşılıklarıyla birlikte desteklenir. bildirimler için anahtar türündeki kontroller de tanınır. tanınmayan bir seçenek hatası artık kullanıcıyı dil değiştirmeye yönlendirmez.
-
-x’in normal bağlantı adresi içermeyen, içinde “unmute” düğmesi bulunan kelime satırları da desteklenir. bu düğmelere tıklanmaz.
-
 ## kayıt ve bekleme davranışı
 
 bir kelimeyi yeni kayıt olarak saymak için bu kaydetme isteğine ait başarılı yanıtta kelime ve kayıt kimliği bulunmalı, uygulama hatası olmamalı ve kelime x listesinde görünmelidir. yalnızca düğmeye basılması, http 200 alınması veya kelimenin geçici olarak görünmesi başarı değildir.
