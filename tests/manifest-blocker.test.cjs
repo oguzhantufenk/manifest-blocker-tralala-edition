@@ -45,8 +45,10 @@ async function test(name,fn){if(process.argv[2]&&!name.includes(process.argv[2])
   await f.page.evaluate(code);assert.equal(await f.page.locator('#manifest-blocker-panel').count(),1);
   assert.deepEqual(f.errors,[]);await f.context.close();
  });
- for(const emptyHeading of ['span','h2'])await test('Empty X screen: Add muted words '+emptyHeading,async()=>{
-  const f=await setup({existing:[],emptyScreen:true,emptyHeading,extraScrollers:true,english:true,switchControl:true});await idle(f.page);
+ // Turkish titles/form labels: https://abs.twimg.com/x-web/x-web/assets/tr-BGdByBqZ.js
+ // Empty descriptions below are representative translated fixtures, not a captured logged-in Turkish DOM.
+ for(const turkish of [false,true])for(const emptyHeading of ['span','h2'])await test('Empty X screen '+(turkish?'TR':'EN')+': '+emptyHeading,async()=>{
+  const f=await setup({existing:[],emptyScreen:true,emptyHeading,extraScrollers:true,english:!turkish,turkish,switchControl:true});await idle(f.page);
   assert.equal(await f.page.evaluate(()=>ManifestBlocker.status().phase),'seçime hazır');
   assert.deepEqual(await f.page.evaluate(()=>ManifestBlocker.status().existing),[]);
   assert.equal(await f.page.locator('#manifest-blocker-panel .stat b').first().textContent(),'0');
@@ -56,12 +58,38 @@ async function test(name,fn){if(process.argv[2]&&!name.includes(process.argv[2])
   assert.deepEqual(await f.page.evaluate(()=>ManifestBlocker.status().verified),['#tralala']);
   assert.equal(await f.page.evaluate(()=>calls.length),1);assert.deepEqual(f.errors,[]);await f.context.close();
  });
- for(const cfg of [{emptyNoTitle:true},{emptyNoDescription:true},{emptyNoAdd:true},{emptyHiddenTitle:true},{emptyHeading:'button'},{emptyLoading:true},{emptyError:true},{emptyPagination:true}])await test('Empty X screen fails closed '+JSON.stringify(cfg),async()=>{
-  const f=await setup({existing:[],emptyScreen:true,...cfg});await idle(f.page);
+ for(const turkish of [false,true])for(const cfg of [{emptyNoTitle:true},{emptyNoDescription:true},{emptyNoAdd:true},{emptyHiddenTitle:true},{emptyHeading:'button'},{emptyLoading:true},{emptyError:true},{emptyPagination:true},{emptyDescription:'Alakasız bir açıklama.'}])await test('Empty X screen fails closed '+(turkish?'TR':'EN')+' '+JSON.stringify(cfg),async()=>{
+  const f=await setup({existing:[],emptyScreen:true,turkish,...cfg});await idle(f.page);
   assert.equal(await f.page.evaluate(()=>ManifestBlocker.status().phase),'kontrol gerekiyor');
   assert.equal(await f.page.locator('#manifest-blocker-panel .primary').isEnabled(),false);
   assert.equal(await f.page.locator('#manifest-blocker-panel .stat b').first().textContent(),'—');
   assert.equal(await f.page.evaluate(()=>calls.length),0);await f.context.close();
+ });
+ for(const legacyEmptyText of ['Henüz hiçbir kelimeyi sessize almadın.','Sessize aldığın kelime yok.'])await test('Turkish legacy empty text '+legacyEmptyText,async()=>{
+  const f=await setup({existing:[],turkish:true,legacyEmptyText});await idle(f.page);
+  assert.equal(await f.page.evaluate(()=>ManifestBlocker.status().phase),'seçime hazır');
+  assert.equal(await f.page.locator('#manifest-blocker-panel .stat b').first().textContent(),'0');
+  assert.equal(await f.page.evaluate(()=>calls.length),0);await f.context.close();
+ });
+ for(const emptyDescription of [
+  'Bir kelimeyi sessize aldığında yeni bildirimleri veya Ana Sayfa zaman akışındaki bu kelimeyi içeren Tweetleri görmezsin.',
+  'When you mute words, you won’t get any new notifications for posts that include them or see posts with those words in your Home timeline.'
+ ])await test('Turkish empty title with description variant '+emptyDescription,async()=>{
+  const f=await setup({existing:[],emptyScreen:true,turkish:true,emptyDescription});await idle(f.page);
+  assert.equal(await f.page.evaluate(()=>ManifestBlocker.status().phase),'seçime hazır');
+  assert.equal(await f.page.evaluate(()=>calls.length),0);await f.context.close();
+ });
+ for(const errorText of ['Bir hata oluştu.','Yeniden dene','Üst sınıra ulaşıldı','Üzgünüz, kullanım limitine takıldın. Lütfen biraz bekle, sonra tekrar dene.'])await test('Turkish page error stops '+errorText,async()=>{
+  const f=await setup({existing:[],emptyScreen:true,turkish:true,emptyError:true,errorText});await idle(f.page);
+  assert.equal(await f.page.locator('#manifest-blocker-panel .primary').isEnabled(),false);
+  assert.equal(await f.page.locator('#manifest-blocker-panel .stat b').first().textContent(),'—');
+  assert.equal(await f.page.evaluate(()=>calls.length),0);
+  if(errorText.includes('sınıra')||errorText.includes('limitine')){
+   await tick(f.page,59000);assert.equal(await f.page.getByRole('button',{name:'tara',exact:true}).isEnabled(),false);
+   await tick(f.page,2000);assert.equal(await f.page.getByRole('button',{name:'tara',exact:true}).isEnabled(),true);
+   assert.equal(await f.page.evaluate(()=>calls.length),0);
+  }
+  await f.context.close();
  });
  await test('Empty X screen waits for stability and reads rows that arrive later',async()=>{
   const f=await setup({existing:[],emptyScreen:true});
@@ -76,9 +104,9 @@ async function test(name,fn){if(process.argv[2]&&!name.includes(process.argv[2])
   assert.equal((await f.page.evaluate(()=>ManifestBlocker.status())).existing.length,80);
   assert.equal(await f.page.locator('#scroll').evaluate(e=>e.scrollTop),0);await f.context.close();
  });
- for(const turkishRows of [false,true])await test('Live X role-link rows without href or testid '+(turkishRows?'TR':'EN'),async()=>{
+ for(const unmuteLabel of ['Unmute','Sessize almayı kaldır','Sesi aç'])await test('Live X role-link rows without href or testid '+unmuteLabel,async()=>{
   const existing=Array.from({length:65},(_,i)=>'word '+i);existing[0]='manifest';existing[31]='manifest grubu';existing[64]='manifest fancam';
-  const f=await setup({existing,virtual:true,roleRows:true,turkishRows});await idle(f.page);
+  const f=await setup({existing,virtual:true,roleRows:true,unmuteLabel});await idle(f.page);
   assert.equal((await f.page.evaluate(()=>ManifestBlocker.status())).existing.length,65);
   assert.equal(await f.page.locator('#manifest-blocker-panel .stat b').first().textContent(),'3');
   assert.equal(await f.page.evaluate(()=>window.unmuteCalls||0),0);assert.equal(await f.page.evaluate(()=>calls.length),0);
@@ -91,7 +119,7 @@ async function test(name,fn){if(process.argv[2]&&!name.includes(process.argv[2])
   const alerts=[];f.page.on('dialog',async d=>{alerts.push(d.message());await d.dismiss();});
   await f.page.evaluate(code);assert.equal(await f.page.evaluate(()=>ManifestBlocker.version),'1.0.0');assert.equal(alerts.length,1);
   await f.page.evaluate(()=>{const current=ManifestBlocker;window.manifestblocker=window.ManifestBlocker={...current,status:()=>({busy:false}),dismiss:()=>{current.dismiss();delete window.ManifestBlocker;delete window.manifestblocker;}};});
-  await f.page.evaluate(code);await idle(f.page);assert.equal(await f.page.evaluate(()=>ManifestBlocker.version),'2.0.3');
+  await f.page.evaluate(code);await idle(f.page);assert.equal(await f.page.evaluate(()=>ManifestBlocker.version),'2.0.4');
   assert.equal(await f.page.locator('#manifest-blocker-panel').count(),1);assert.deepEqual(f.errors,[]);await f.context.close();
  });
  for(const transport of ['fetch','xhr'])await test(transport+' confirmed save + settings + cleanup',async()=>{
@@ -115,8 +143,16 @@ async function test(name,fn){if(process.argv[2]&&!name.includes(process.argv[2])
   const calls=await f.page.evaluate(()=>calls);assert.equal(calls.length,1);assert.deepEqual(calls[0].options,['Home timeline','Notifications','From anyone',durationLabel]);
   assert.deepEqual(f.errors,[]);await f.context.close();
  });
- await test('Unknown duration stops before saving and does not blame the interface language',async()=>{
-  const f=await setup({existing:[],english:true,durationLabel:'A different duration'});await idle(f.page);
+ for(const durationLabel of ['Kelimenin sesini açana kadar','Sonsuza Kadar','Süresiz'])await test('Turkish form labels: '+durationLabel,async()=>{
+  const f=await setup({existing:[],emptyScreen:true,turkish:true,durationLabel,switchControl:true,fallback:true});await idle(f.page);
+  await selected(f.page,['manifest edit']);await f.page.getByRole('button',{name:'seçilileri sessize al',exact:true}).click();await idle(f.page);
+  assert.deepEqual(await f.page.evaluate(()=>ManifestBlocker.status().verified),['manifest edit']);
+  const calls=await f.page.evaluate(()=>calls);assert.equal(calls.length,1);
+  assert.deepEqual(calls[0].options,['Anasayfa zaman akışı','Bildirimler','Herhangi birinden',durationLabel]);
+  assert.deepEqual(f.errors,[]);await f.context.close();
+ });
+ for(const turkish of [false,true])await test('Unknown duration stops before saving and does not blame the interface language '+(turkish?'TR':'EN'),async()=>{
+  const f=await setup({existing:[],english:!turkish,turkish,durationLabel:turkish?'Bilinmeyen bir süre':'A different duration'});await idle(f.page);
   await selected(f.page,['manifest edit']);await f.page.getByRole('button',{name:'seçilileri sessize al',exact:true}).click();await idle(f.page);
   assert.equal(await f.page.evaluate(()=>calls.length),0);assert.match(await f.page.locator('#manifest-blocker-panel .detail').textContent(),/etiket veya kontrol yapısı/);
   await f.context.close();
@@ -124,11 +160,12 @@ async function test(name,fn){if(process.argv[2]&&!name.includes(process.argv[2])
  await test('Lowercase branding, no logo and new palette',async()=>{
   const f=await setup();await idle(f.page);
   const ui=await f.page.locator('#manifest-blocker-panel').innerText();assert.equal(ui,ui.toLocaleLowerCase('tr-TR'));
+  assert.doesNotMatch(await f.page.locator('#manifest-blocker-panel .log').textContent(),/\b\d+\.\d+\.\d+\b/);
   assert.equal(await f.page.locator('#manifest-blocker-panel h2').textContent(),'manifest blocker:');
   assert.equal(await f.page.locator('#manifest-blocker-panel .eyebrow').textContent(),'tralala edition');
   assert.equal(await f.page.locator('#manifest-blocker-panel .mark').count(),0);
   assert.equal(await f.page.locator('#manifest-blocker-panel .primary').evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(255, 176, 136)');
-  assert.equal(await f.page.evaluate(()=>manifestblocker.version),'2.0.3');await f.context.close();
+  assert.equal(await f.page.evaluate(()=>manifestblocker.version),'2.0.4');await f.context.close();
  });
  for(const cfg of [{response:{errors:[{message:'Denied'}]},optimistic:true},{response:{success:true}},{badJson:true},{noDom:true},{http:500}])await test('No false success '+JSON.stringify(cfg),async()=>{
   const f=await setup({existing:[],...cfg});await idle(f.page);await selected(f.page,['manifest grubu','manifest edit']);
@@ -211,6 +248,8 @@ async function test(name,fn){if(process.argv[2]&&!name.includes(process.argv[2])
   await context.route('**/*',r=>{if(r.request().isNavigationRequest())return r.fulfill({body:fs.readFileSync('index.html','utf8'),contentType:'text/html'});unexpected.push(r.request().url());return r.abort();});
   await page.addInitScript(()=>Object.defineProperty(navigator,'clipboard',{value:{writeText:async text=>{window.copied=text;}}}));
   await page.goto('https://manifest-blocker.example/');await page.getByRole('button',{name:'kodu kopyala',exact:true}).click();
+  assert.doesNotMatch(await page.locator('body').innerText(),/\bv?\d+\.\d+\.\d+\b|changelog|sürüm|versiyon/i);
+  assert.equal(await page.locator('.edition').count(),0);
   assert.equal(await page.evaluate(()=>window.copied),code);assert.equal(await page.evaluate(()=>typeof window.ManifestBlocker),'undefined');assert.deepEqual(unexpected,[]);
   await page.screenshot({path:'.test-artifacts/copy-page.png',fullPage:true});await context.close();
  });

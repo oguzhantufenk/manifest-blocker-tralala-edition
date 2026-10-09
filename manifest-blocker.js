@@ -4,7 +4,7 @@
   // https://x.com/settings/muted_keywords açıkken Console'a tamamını yapıştırın.
   const KEY = 'manifest-blocker:v1';
   const ROOT_ID = 'manifest-blocker-panel';
-  const VERSION = '2.0.3';
+  const VERSION = '2.0.4';
   const lower = value => String(value ?? '').toLocaleLowerCase('tr-TR');
   const notifyUser = message => window.alert(lower(message));
   if (!/^(www\.)?(x|twitter)\.com$/.test(location.hostname) ||
@@ -355,10 +355,16 @@
     const text = tidy(root.innerText).replace(/[‘’]/g, "'");
     if (/(?:you (?:haven.t|have not) muted any words|you don.t have any muted words|no muted words|hiçbir kelimeyi sessize almad|sessize aldığın(?:ız)? (?:hiçbir )?kelime yok|sessize alın(?:an|mış) kelime(?:niz|lerin)? yok)/i.test(text)) return true;
     // X'in boş liste ekranı: başlık tek başına yeterli değil; açıklama ve ekleme kontrolü de görünmeli.
-    const title = all('h1,h2,h3,[role="heading"],span', root).some(n =>
-      !n.closest('a,button,[role="button"],[role="link"]') && /^add muted words$/i.test(tidy(n.innerText)));
-    return title && /when you mute words, you won't get any new notifications/i.test(text) &&
-      /posts with those words in your home timeline/i.test(text) && all(SEL.add, root).some(enabled);
+    const titles = all('h1,h2,h3,[role="heading"],span', root).filter(n =>
+      !n.closest('a,button,[role="button"],[role="link"]')).map(n => lower(tidy(n.innerText)));
+    const englishDescription = /when you mute words, you won't get any new notifications/i.test(text) &&
+      /posts with those words in your home timeline/i.test(text);
+    const turkishText = lower(text);
+    const turkishDescription = /kelime.{0,80}sessize al/.test(turkishText) && /bildirim/.test(turkishText) &&
+      /ana\s?sayfa zaman akış/.test(turkishText) && /(?:gönderi|tweet)/.test(turkishText);
+    const recognized = titles.includes('add muted words') && englishDescription ||
+      titles.includes('sessize alınan kelime ekle') && (turkishDescription || englishDescription);
+    return recognized && all(SEL.add, root).some(enabled);
   }
   function scrollContainer(root) {
     const first = rowElements(root)[0];
@@ -373,10 +379,10 @@
   function busyIndicator(root) { return all('[role="progressbar"], [aria-busy="true"]', root).length > 0; }
   function pageError(root) {
     const text = all('[role="alert"], [data-testid="toast"]', root).map(n => n.innerText).join(' ');
-    if (/rate.?limit|too many requests|istek sınır|çok fazla istek/i.test(text)) {
+    if (/rate.?limit|too many requests|istek sınır|çok fazla istek|üst sınıra ulaşıldı|kullanım limitine takıldın/i.test(text)) {
       setRate(() => null); throw new Error('X istek sınırı bildirdi.');
     }
-    if (/something went wrong|try again|bir sorun oluştu|bir hata oluştu|tekrar dene|already muted|zaten sessiz/i.test(text)) throw new Error(`X uyarısı: ${tidy(text).slice(0, 180)}`);
+    if (/something went wrong|try again|bir sorun oluştu|bir hata oluştu|tekrar dene|yeniden dene|already muted|zaten sessiz/i.test(text)) throw new Error(`X uyarısı: ${tidy(text).slice(0, 180)}`);
   }
   function ensureNoMorePages(root) {
     const more = all('button,[role="button"],a', root).some(n => enabled(n) && /^(load more|show more|next|daha fazla(?: göster)?|sonraki)$/i.test(tidy(n.innerText || n.getAttribute('aria-label'))));
@@ -492,8 +498,8 @@
     const options = [];
     options.push(await setOption(root, /^(home timeline|ana\s?sayfa(?: zaman akışı)?)$/i, 'Ana sayfa'));
     options.push(await setOption(root, /^(notifications|bildirimler)$/i, 'Bildirimler'));
-    options.push(await setOption(root, /^(from anyone|herkesten)$/i, 'Herkesten'));
-    options.push(await setOption(root, /^(forever|until you unmute (?:the|this) word|süresiz|sonsuza kadar|(?:kelimenin sessizliğini|kelimeyi sessizden) (?:açana|çıkarana) kadar)(?:\s*\([^)]*\))?$/i, 'Süresiz'));
+    options.push(await setOption(root, /^(from anyone|herkesten|herhangi birinden)$/i, 'Herkesten'));
+    options.push(await setOption(root, /^(forever|until you unmute (?:the|this) word|süresiz|sonsuza kadar|(?:kelimenin (?:sesini|sessizliğini)|kelimeyi sessizden) (?:açana|çıkarana) kadar)(?:\s*\([^)]*\))?$/i, 'Süresiz'));
     const save = await waitFor(() => { const b = saveButton(scope()); return enabled(b) && b; }, 'Kaydet düğmesi etkinleşmedi.');
     guard();
     if (!isAdd() || !input.isConnected || input.value !== word || options.some(n => !n.isConnected || !checked(n))) throw new Error('Kaydetmeden önce form değişti. İşlem durdu.');
@@ -624,7 +630,7 @@
   window.manifestblocker = api;
   window.ManifestBlocker = api; // 1.x console komutları için uyumluluk
   const ticker = setInterval(() => { if (state.rate && !state.busy) render(); }, 1000);
-  log(`manifest blocker: tralala edition ${VERSION} hazır. Kayıt için seçiminiz ve başlatmanız beklenir.`);
+  log('manifest blocker: tralala edition hazır. Kayıt için seçiminiz ve başlatmanız beklenir.');
   render();
   if (!state.rate) void run(true);
   else status('429 · Durdu', 'Önceki 429 beklemesi korunuyor. Daha sonra Tara ile kontrol edin.');

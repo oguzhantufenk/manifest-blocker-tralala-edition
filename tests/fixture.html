@@ -12,8 +12,8 @@ function route(path){ history.pushState({},'',path);render(); }
 function render(){
  if(location.pathname==='/settings/add_muted_keyword'){
   main.innerHTML=`<button data-testid="app-bar-back">← Geri</button><h1>Sessize alınan kelime ekle</h1><div class="form"><input name="keyword" type="text" aria-label="Kelime"><label><input type="checkbox">Ana sayfa zaman akışı</label><label><input type="checkbox">Bildirimler</label><label><input type="radio" name="who">Herkesten</label><label><input type="radio" name="who" checked>Takip etmediğin kişilerden</label><label><input type="radio" name="duration">Süresiz</label><label><input type="radio" name="duration" checked>24 saat</label><button data-testid="settingsSave" disabled>Kaydet</button></div>`;
-  if(cfg.english){
-   const text=['Home timeline','Notifications','From anyone','From people you don’t follow',cfg.durationLabel||'Until you unmute the word','24 hours'];
+  if(cfg.english||cfg.turkish){
+   const text=cfg.english?['Home timeline','Notifications','From anyone','From people you don’t follow',cfg.durationLabel||'Until you unmute the word','24 hours']:['Anasayfa zaman akışı','Bildirimler','Herhangi birinden','Takip etmediğin kişilerden',cfg.durationLabel||'Kelimenin sesini açana kadar','24 saat'];
    main.querySelectorAll('label').forEach((label,i)=>{label.lastChild.textContent=text[i];});
   }
   if(cfg.switchControl){
@@ -34,17 +34,17 @@ function render(){
   if(cfg.unknownRows){scroll.innerHTML='<div>Tanımlanamayan liste biçimi</div>';return;}
   if(!savedWords.length){
    if(cfg.emptyScreen){
-    main.querySelector('h1').textContent='Muted words';
+    main.querySelector('h1').textContent=cfg.turkish?'Sessize alınacak kelimeler':'Muted words';
     scroll.innerHTML='<div data-testid="emptyState"></div>';
     const empty=scroll.firstElementChild;
-    if(!cfg.emptyNoTitle){const title=document.createElement(cfg.emptyHeading||'span');title.textContent='Add muted words';if(cfg.emptyHiddenTitle)title.hidden=true;empty.append(title);}
-    if(!cfg.emptyNoDescription){const description=document.createElement('p');description.textContent='When you mute words, you won’t get any new notifications for posts that include them or see posts with those words in your Home timeline.';empty.append(description);}
+    if(!cfg.emptyNoTitle){const title=document.createElement(cfg.emptyHeading||'span');title.textContent=cfg.turkish?'Sessize alınan kelime ekle':'Add muted words';if(cfg.emptyHiddenTitle)title.hidden=true;empty.append(title);}
+    if(!cfg.emptyNoDescription){const description=document.createElement('p');description.textContent=cfg.emptyDescription||(cfg.turkish?'Kelimeleri sessize aldığında bu kelimeleri içeren gönderiler için yeni bildirimler almaz veya Anasayfa zaman akışında bu kelimeleri içeren gönderileri görmezsin.':'When you mute words, you won’t get any new notifications for posts that include them or see posts with those words in your Home timeline.');empty.append(description);}
     if(cfg.emptyNoAdd)main.querySelector('.add').remove();
     if(cfg.emptyLoading){const loading=document.createElement('div');loading.setAttribute('role','progressbar');loading.textContent='Loading';empty.append(loading);}
-    if(cfg.emptyError){const error=document.createElement('div');error.setAttribute('role','alert');error.textContent='Something went wrong. Try again.';main.append(error);}
-    if(cfg.emptyPagination){const more=document.createElement('button');more.textContent='Load more';main.append(more);}
+    if(cfg.emptyError){const error=document.createElement('div');error.setAttribute('role','alert');error.textContent=cfg.errorText||(cfg.turkish?'Bir sorun oluştu. Yeniden dene.':'Something went wrong. Try again.');main.append(error);}
+    if(cfg.emptyPagination){const more=document.createElement('button');more.textContent=cfg.turkish?'Daha fazla göster':'Load more';main.append(more);}
     if(cfg.extraScrollers)for(let i=0;i<2;i++){const sidebar=document.createElement('div');sidebar.className='settings-sidebar';sidebar.style.cssText='height:120px;overflow:auto';sidebar.innerHTML='<div style="height:400px">Settings</div>';main.append(sidebar);sidebar.scrollTop=70;}
-   }else scroll.innerHTML='<p class="description">You haven’t muted any words yet.</p>';
+   }else{const description=document.createElement('p');description.className='description';description.textContent=cfg.legacyEmptyText||'You haven’t muted any words yet.';scroll.append(description);}
    return;
   }
   const draw=()=>{
@@ -58,7 +58,7 @@ function render(){
     a.style.position='absolute';a.style.top=i*52+'px';a.style.width='100%';
     const text=document.createElement('span');text.textContent=savedWords[i];a.append(text);
     const time=document.createElement('small');time.textContent='Süresiz';a.append(time);
-    if(cfg.roleRows){const unmute=document.createElement('button');unmute.setAttribute('aria-label',cfg.turkishRows?'Sessize almayı kaldır':'Unmute');unmute.textContent='';unmute.style.cssText='position:absolute;right:8px;top:2px';unmute.onclick=()=>window.unmuteCalls=(window.unmuteCalls||0)+1;a.append(unmute);}
+    if(cfg.roleRows){const unmute=document.createElement('button');unmute.setAttribute('aria-label',cfg.unmuteLabel||(cfg.turkishRows?'Sessize almayı kaldır':'Unmute'));unmute.textContent='';unmute.style.cssText='position:absolute;right:8px;top:2px';unmute.onclick=()=>window.unmuteCalls=(window.unmuteCalls||0)+1;a.append(unmute);}
     wrap.append(a);
    }
   };
