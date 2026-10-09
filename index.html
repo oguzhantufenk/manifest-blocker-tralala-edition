@@ -3,7 +3,7 @@
 <style>
 *{box-sizing:border-box}body{margin:0;background:#eef0e8;color:#253022;font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}main{max-width:1140px;margin:auto;padding:66px 40px;display:grid;grid-template-columns:1fr 388px;gap:64px;align-items:start}.edition{display:flex;gap:18px;font-size:11px;color:#69765e;letter-spacing:.3px}.edition span:last-child{color:#a04d2c}h1{font-size:51px;line-height:1.03;font-weight:610;letter-spacing:-2.4px;margin:30px 0 22px}h1 span{color:#986449}p{color:#616e57;font-size:15px}.lead{margin-bottom:27px}a{color:#835335;text-underline-offset:4px}button{font:inherit;cursor:pointer;border:0;border-radius:10px;padding:13px 19px;transition:transform 120ms ease-out}button:active{transform:scale(.98)}button:focus-visible,a:focus-visible,summary:focus-visible,textarea:focus-visible{outline:3px solid #b47551;outline-offset:4px}.copy{background:#253222;color:#f2f3e9;font-weight:600}.download{background:#e0e5d9;color:#4d5a42;margin-left:5px;font-size:13px}.notice{min-height:24px;margin-top:11px;font-size:12px;color:#617154}ol{padding-left:21px;margin:32px 0}li{padding-left:7px;margin:15px 0;font-size:14px}li span{display:block;color:#6a775e;font-size:12px}kbd{background:#e1e6d9;border:1px solid #d0d8c7;border-radius:4px;padding:1px 4px;font-size:11px}.features{border-block:1px solid #d3dbcb;padding:16px 0;display:grid;grid-template-columns:1fr 1fr;gap:7px 18px;color:#55624b;font-size:12px}.note{font-size:12px;color:#6b7760;line-height:1.75;margin-top:18px}.visual{margin:0;position:sticky;top:28px}.visual img{display:block;width:100%;border-radius:20px;box-shadow:0 24px 70px #2a331f25}.visual figcaption{text-align:center;color:#7b856f;font-size:11px;margin-top:15px}details{margin-top:25px;font-size:12px;color:#627055}summary{cursor:pointer}textarea{width:100%;height:300px;padding:15px;margin-top:12px;font:11px/1.5 ui-monospace,monospace;background:#fafbf6;border:1px solid #b8c4ad;border-radius:10px;white-space:pre;color:#3b4b31;resize:vertical}footer{font-size:11px;color:#7d8970;margin-top:26px;line-height:1.7}@media(max-width:850px){main{grid-template-columns:1fr;gap:35px;padding:36px 24px;max-width:650px}h1{font-size:43px}.visual{position:static;max-width:388px;margin:auto;width:100%}}@media(prefers-reduced-motion:reduce){button{transition:none}button:active{transform:none}}
 </style></head><body><main><section>
-<div class="edition"><span>v2.0.2</span></div>
+<div class="edition"><span>v2.0.3</span></div>
 <h1>manifest blocker:<br><span>tralala edition</span></h1>
 <p class="lead">kelimeleri seç. gerisini panele bırak.<br>x’in üzerinde, tek yapıştırmayla.</p>
 <button class="copy" id="copy">kodu kopyala</button><button class="download" id="download">js dosyasını indir</button>
@@ -22,7 +22,7 @@
   // https://x.com/settings/muted_keywords açıkken Console'a tamamını yapıştırın.
   const KEY = 'manifest-blocker:v1';
   const ROOT_ID = 'manifest-blocker-panel';
-  const VERSION = '2.0.2';
+  const VERSION = '2.0.3';
   const lower = value =&gt; String(value ?? '').toLocaleLowerCase('tr-TR');
   const notifyUser = message =&gt; window.alert(lower(message));
   if (!/^(www\.)?(x|twitter)\.com$/.test(location.hostname) ||
@@ -369,7 +369,14 @@
     return result;
   }
   function emptyList(root) {
-    return /(?:you (?:haven.t|have not) muted any words|you don.t have any muted words|no muted words|hiçbir kelimeyi sessize almad|sessize aldığın(?:ız)? (?:hiçbir )?kelime yok|sessize alın(?:an|mış) kelime(?:niz|lerin)? yok)/i.test(root.innerText);
+    if (!root?.isConnected || !isList() || busyIndicator(root) || rowElements(root).length) return false;
+    const text = tidy(root.innerText).replace(/[‘’]/g, "'");
+    if (/(?:you (?:haven.t|have not) muted any words|you don.t have any muted words|no muted words|hiçbir kelimeyi sessize almad|sessize aldığın(?:ız)? (?:hiçbir )?kelime yok|sessize alın(?:an|mış) kelime(?:niz|lerin)? yok)/i.test(text)) return true;
+    // X'in boş liste ekranı: başlık tek başına yeterli değil; açıklama ve ekleme kontrolü de görünmeli.
+    const title = all('h1,h2,h3,[role="heading"],span', root).some(n =&gt;
+      !n.closest('a,button,[role="button"],[role="link"]') &amp;&amp; /^add muted words$/i.test(tidy(n.innerText)));
+    return title &amp;&amp; /when you mute words, you won't get any new notifications/i.test(text) &amp;&amp;
+      /posts with those words in your home timeline/i.test(text) &amp;&amp; all(SEL.add, root).some(enabled);
   }
   function scrollContainer(root) {
     const first = rowElements(root)[0];
@@ -389,14 +396,25 @@
     }
     if (/something went wrong|try again|bir sorun oluştu|bir hata oluştu|tekrar dene|already muted|zaten sessiz/i.test(text)) throw new Error(`X uyarısı: ${tidy(text).slice(0, 180)}`);
   }
+  function ensureNoMorePages(root) {
+    const more = all('button,[role="button"],a', root).some(n =&gt; enabled(n) &amp;&amp; /^(load more|show more|next|daha fazla(?: göster)?|sonraki)$/i.test(tidy(n.innerText || n.getAttribute('aria-label'))));
+    if (more) throw new Error('Ek sayfa düğmesi bulundu. Liste tamamen taranamadı; kayıt durdu.');
+  }
   async function scanList(ignorePause = false) {
     guard(ignorePause);
     if (!isList()) throw new Error('Taramak için X’in sessize alınan kelimeler listesi açık olmalı.');
     const root = await waitFor(scope, 'X’in ana alanı bulunamadı.', 12000, ignorePause);
+    let emptySince = null;
     await waitFor(() =&gt; {
+      if (!root.isConnected || !isList()) throw new Error('Tarama sırasında X listesi değişti.');
       pageError(root);
-      return !busyIndicator(root) &amp;&amp; (readRows(root).size || emptyList(root));
-    }, 'X kelime listesi okunamadı. Listenin açık ve yüklenmiş olduğundan emin olun. Devam ederse panel sürümünü kontrol edin (2.0).', 15000, ignorePause);
+      if (!busyIndicator(root) &amp;&amp; readRows(root).size) return true;
+      if (!emptyList(root)) { emptySince = null; return false; }
+      emptySince ??= Date.now();
+      return Date.now() - emptySince &gt;= 2800;
+    }, 'X kelime listesi okunamadı. Sayfayı yenileyip liste yüklendikten sonra güncel kodu tekrar yapıştırın.', 15000, ignorePause);
+    // Boş durum kararlıysa başka ayar sütunlarının kaydırma alanlarını taramaya gerek yok.
+    if (emptyList(root)) { ensureNoMorePages(root); return new Set(); }
     const scroll = scrollContainer(root), originalTop = scroll.scrollTop;
     const found = new Set(); let stable = 0, previous = '', completed = false;
     try {
@@ -417,8 +435,7 @@
       if (!completed) throw new Error('Listenin sonuna ulaşılamadı. Kısmi taramayla kayıt yapılmayacak.');
       if (!found.size &amp;&amp; !emptyList(root)) throw new Error('Boş liste doğrulanamadı.');
       // Sayfalama düğmesi varsa yalnızca ilk sayfayı "tam" sayma.
-      const more = all('button,[role="button"],a', root).some(n =&gt; enabled(n) &amp;&amp; /^(load more|show more|next|daha fazla(?: göster)?|sonraki)$/i.test(tidy(n.innerText || n.getAttribute('aria-label'))));
-      if (more) throw new Error('Ek sayfa düğmesi bulundu. Liste tamamen taranamadı; kayıt durdu.');
+      ensureNoMorePages(root);
       return found;
     } finally { if (scroll.isConnected) setScroll(scroll, originalTop); }
   }

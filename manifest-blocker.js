@@ -4,7 +4,7 @@
   // https://x.com/settings/muted_keywords açıkken Console'a tamamını yapıştırın.
   const KEY = 'manifest-blocker:v1';
   const ROOT_ID = 'manifest-blocker-panel';
-  const VERSION = '2.0.2';
+  const VERSION = '2.0.3';
   const lower = value => String(value ?? '').toLocaleLowerCase('tr-TR');
   const notifyUser = message => window.alert(lower(message));
   if (!/^(www\.)?(x|twitter)\.com$/.test(location.hostname) ||
@@ -351,7 +351,14 @@
     return result;
   }
   function emptyList(root) {
-    return /(?:you (?:haven.t|have not) muted any words|you don.t have any muted words|no muted words|hiçbir kelimeyi sessize almad|sessize aldığın(?:ız)? (?:hiçbir )?kelime yok|sessize alın(?:an|mış) kelime(?:niz|lerin)? yok)/i.test(root.innerText);
+    if (!root?.isConnected || !isList() || busyIndicator(root) || rowElements(root).length) return false;
+    const text = tidy(root.innerText).replace(/[‘’]/g, "'");
+    if (/(?:you (?:haven.t|have not) muted any words|you don.t have any muted words|no muted words|hiçbir kelimeyi sessize almad|sessize aldığın(?:ız)? (?:hiçbir )?kelime yok|sessize alın(?:an|mış) kelime(?:niz|lerin)? yok)/i.test(text)) return true;
+    // X'in boş liste ekranı: başlık tek başına yeterli değil; açıklama ve ekleme kontrolü de görünmeli.
+    const title = all('h1,h2,h3,[role="heading"],span', root).some(n =>
+      !n.closest('a,button,[role="button"],[role="link"]') && /^add muted words$/i.test(tidy(n.innerText)));
+    return title && /when you mute words, you won't get any new notifications/i.test(text) &&
+      /posts with those words in your home timeline/i.test(text) && all(SEL.add, root).some(enabled);
   }
   function scrollContainer(root) {
     const first = rowElements(root)[0];
@@ -371,14 +378,25 @@
     }
     if (/something went wrong|try again|bir sorun oluştu|bir hata oluştu|tekrar dene|already muted|zaten sessiz/i.test(text)) throw new Error(`X uyarısı: ${tidy(text).slice(0, 180)}`);
   }
+  function ensureNoMorePages(root) {
+    const more = all('button,[role="button"],a', root).some(n => enabled(n) && /^(load more|show more|next|daha fazla(?: göster)?|sonraki)$/i.test(tidy(n.innerText || n.getAttribute('aria-label'))));
+    if (more) throw new Error('Ek sayfa düğmesi bulundu. Liste tamamen taranamadı; kayıt durdu.');
+  }
   async function scanList(ignorePause = false) {
     guard(ignorePause);
     if (!isList()) throw new Error('Taramak için X’in sessize alınan kelimeler listesi açık olmalı.');
     const root = await waitFor(scope, 'X’in ana alanı bulunamadı.', 12000, ignorePause);
+    let emptySince = null;
     await waitFor(() => {
+      if (!root.isConnected || !isList()) throw new Error('Tarama sırasında X listesi değişti.');
       pageError(root);
-      return !busyIndicator(root) && (readRows(root).size || emptyList(root));
-    }, 'X kelime listesi okunamadı. Listenin açık ve yüklenmiş olduğundan emin olun. Devam ederse panel sürümünü kontrol edin (2.0).', 15000, ignorePause);
+      if (!busyIndicator(root) && readRows(root).size) return true;
+      if (!emptyList(root)) { emptySince = null; return false; }
+      emptySince ??= Date.now();
+      return Date.now() - emptySince >= 2800;
+    }, 'X kelime listesi okunamadı. Sayfayı yenileyip liste yüklendikten sonra güncel kodu tekrar yapıştırın.', 15000, ignorePause);
+    // Boş durum kararlıysa başka ayar sütunlarının kaydırma alanlarını taramaya gerek yok.
+    if (emptyList(root)) { ensureNoMorePages(root); return new Set(); }
     const scroll = scrollContainer(root), originalTop = scroll.scrollTop;
     const found = new Set(); let stable = 0, previous = '', completed = false;
     try {
@@ -399,8 +417,7 @@
       if (!completed) throw new Error('Listenin sonuna ulaşılamadı. Kısmi taramayla kayıt yapılmayacak.');
       if (!found.size && !emptyList(root)) throw new Error('Boş liste doğrulanamadı.');
       // Sayfalama düğmesi varsa yalnızca ilk sayfayı "tam" sayma.
-      const more = all('button,[role="button"],a', root).some(n => enabled(n) && /^(load more|show more|next|daha fazla(?: göster)?|sonraki)$/i.test(tidy(n.innerText || n.getAttribute('aria-label'))));
-      if (more) throw new Error('Ek sayfa düğmesi bulundu. Liste tamamen taranamadı; kayıt durdu.');
+      ensureNoMorePages(root);
       return found;
     } finally { if (scroll.isConnected) setScroll(scroll, originalTop); }
   }

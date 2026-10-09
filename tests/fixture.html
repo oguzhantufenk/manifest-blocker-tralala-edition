@@ -32,7 +32,21 @@ function render(){
   main.querySelector('.add').onclick=e=>{e.preventDefault();route('/settings/add_muted_keyword');};
   const scroll=main.querySelector('#scroll');
   if(cfg.unknownRows){scroll.innerHTML='<div>Tanımlanamayan liste biçimi</div>';return;}
-  if(!savedWords.length){scroll.innerHTML='<p class="description">You haven’t muted any words yet.</p>';return;}
+  if(!savedWords.length){
+   if(cfg.emptyScreen){
+    main.querySelector('h1').textContent='Muted words';
+    scroll.innerHTML='<div data-testid="emptyState"></div>';
+    const empty=scroll.firstElementChild;
+    if(!cfg.emptyNoTitle){const title=document.createElement(cfg.emptyHeading||'span');title.textContent='Add muted words';if(cfg.emptyHiddenTitle)title.hidden=true;empty.append(title);}
+    if(!cfg.emptyNoDescription){const description=document.createElement('p');description.textContent='When you mute words, you won’t get any new notifications for posts that include them or see posts with those words in your Home timeline.';empty.append(description);}
+    if(cfg.emptyNoAdd)main.querySelector('.add').remove();
+    if(cfg.emptyLoading){const loading=document.createElement('div');loading.setAttribute('role','progressbar');loading.textContent='Loading';empty.append(loading);}
+    if(cfg.emptyError){const error=document.createElement('div');error.setAttribute('role','alert');error.textContent='Something went wrong. Try again.';main.append(error);}
+    if(cfg.emptyPagination){const more=document.createElement('button');more.textContent='Load more';main.append(more);}
+    if(cfg.extraScrollers)for(let i=0;i<2;i++){const sidebar=document.createElement('div');sidebar.className='settings-sidebar';sidebar.style.cssText='height:120px;overflow:auto';sidebar.innerHTML='<div style="height:400px">Settings</div>';main.append(sidebar);sidebar.scrollTop=70;}
+   }else scroll.innerHTML='<p class="description">You haven’t muted any words yet.</p>';
+   return;
+  }
   const draw=()=>{
    const start=cfg.virtual?Math.max(0,Math.floor(scroll.scrollTop/52)-2):0;
    const end=cfg.virtual?Math.min(savedWords.length,start+13):savedWords.length;
