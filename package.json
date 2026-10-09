@@ -1,0 +1,19 @@
+{
+  "name": "manifest-blocker-tralala-edition",
+  "version": "2.0.0",
+  "private": true,
+  "description": "manifest blocker: tralala edition — a small console overlay for x muted words",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node tests/manifest-blocker.test.cjs",
+    "check": "node --check manifest-blocker.js"
+  },
+  "devDependencies": {
+    "playwright": "1.62.1"
+  },
+  "engines": { "node": ">=20" },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/oguzhantufenk/manifest-blocker-tralala-edition.git"
+  }
+}

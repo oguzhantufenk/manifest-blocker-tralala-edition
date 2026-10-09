@@ -1,0 +1,68 @@
+<!doctype html><meta charset="utf-8"><title>X settings — local test fixture</title>
+<style>
+body{background:#090a0d;color:#eae9ee;font:15px system-ui;margin:0;padding:70px 80px}main{max-width:570px;border:1px solid #282932;border-radius:16px;overflow:hidden}h1{font-size:22px;margin:24px}.description{margin:24px;color:#888991;line-height:1.7}a{color:inherit;text-decoration:none}#scroll{height:370px;overflow:auto}.xrow{display:block;height:52px;padding:7px 24px;box-sizing:border-box;border-top:1px solid #25252a}.xrow small{display:block;font-size:10px;color:#92929a}.add{display:block;margin:20px 24px;width:max-content;padding:9px 14px;border:1px solid #43434c;border-radius:30px}.form{padding:24px}label{display:block;margin:12px 0}input[type=text]{padding:10px;width:90%;display:block}button{padding:8px 14px;border-radius:20px;margin:10px;background:#e8e8ee;color:#14141b;border:0}.note{font-size:12px;color:#76777f;margin-top:24px;max-width:470px}
+</style>
+<main id="main"></main><p class="note">Görsel önizleme / test sayfası. Gerçek bir X oturumu değildir.</p>
+<script>
+const cfg = window.CONFIG || {};
+window.calls = []; window.trace=[]; window.savedWords = cfg.existing || ['manifest grubu','esin bahat','hilal yelekçi','lidya pınar','mina solak','sueda uluca','zeynep sude oktay','manifestival','big5 türkiye'];
+const main = document.getElementById('main');
+window.originals = {fetch:window.fetch,open:XMLHttpRequest.prototype.open,send:XMLHttpRequest.prototype.send};
+function route(path){ history.pushState({},'',path);render(); }
+function render(){
+ if(location.pathname==='/settings/add_muted_keyword'){
+  main.innerHTML=`<button data-testid="app-bar-back">← Geri</button><h1>Sessize alınan kelime ekle</h1><div class="form"><input name="keyword" type="text" aria-label="Kelime"><label><input type="checkbox">Ana sayfa zaman akışı</label><label><input type="checkbox">Bildirimler</label><label><input type="radio" name="who">Herkesten</label><label><input type="radio" name="who" checked>Takip etmediğin kişilerden</label><label><input type="radio" name="duration">Süresiz</label><label><input type="radio" name="duration" checked>24 saat</label><button data-testid="settingsSave" disabled>Kaydet</button></div>`;
+  if(cfg.english){
+   const text=['Home timeline','Notifications','From anyone','From people you don’t follow',cfg.durationLabel||'Until you unmute the word','24 hours'];
+   main.querySelectorAll('label').forEach((label,i)=>{label.lastChild.textContent=text[i];});
+  }
+  if(cfg.switchControl){
+   const checkbox=main.querySelectorAll('input[type=checkbox]')[1],toggle=document.createElement('div');
+   toggle.setAttribute('role','switch');toggle.setAttribute('aria-label',cfg.english?'Notifications':'Bildirimler');toggle.setAttribute('aria-checked','false');toggle.tabIndex=0;toggle.textContent='○';
+   toggle.onclick=()=>toggle.setAttribute('aria-checked',String(toggle.getAttribute('aria-checked')!=='true'));checkbox.replaceWith(toggle);
+  }
+  if(cfg.missingOption) main.querySelectorAll('label')[0].remove();
+  if(cfg.fallback){main.querySelector('input[name=keyword]').removeAttribute('name');main.querySelector('[data-testid=settingsSave]').removeAttribute('data-testid');}
+  main.querySelector('[data-testid=app-bar-back]').onclick=()=>route('/settings/muted_keywords');
+  const input=main.querySelector('input[type=text]'), save=main.querySelector('.form button');
+  input.oninput=()=>{save.disabled=!input.value;window.trace.push('input:'+input.value);if(cfg.pauseOnInput) ManifestBlocker.stop();};
+  save.onclick=()=>send(input.value);
+ }else{
+  main.innerHTML='<h1>Sessize alınan kelimeler</h1><p class="description">Sessize aldığın kelimeleri burada yönetebilirsin.</p><a class="add" href="/settings/add_muted_keyword">+ Kelime ekle</a><div id="scroll"></div>';
+  main.querySelector('.add').onclick=e=>{e.preventDefault();route('/settings/add_muted_keyword');};
+  const scroll=main.querySelector('#scroll');
+  if(cfg.unknownRows){scroll.innerHTML='<div>Tanımlanamayan liste biçimi</div>';return;}
+  if(!savedWords.length){scroll.innerHTML='<p class="description">You haven’t muted any words yet.</p>';return;}
+  const draw=()=>{
+   const start=cfg.virtual?Math.max(0,Math.floor(scroll.scrollTop/52)-2):0;
+   const end=cfg.virtual?Math.min(savedWords.length,start+13):savedWords.length;
+   scroll.replaceChildren();
+   const wrap=document.createElement('div');wrap.style.height=savedWords.length*52+'px';wrap.style.position='relative';scroll.append(wrap);
+   for(let i=start;i<end;i++){
+    const a=document.createElement(cfg.roleRows?'div':'a');a.className='xrow';
+    if(cfg.roleRows){a.setAttribute('role','link');a.tabIndex=0;}else a.href='/settings/muted_keywords/'+i;
+    a.style.position='absolute';a.style.top=i*52+'px';a.style.width='100%';
+    const text=document.createElement('span');text.textContent=savedWords[i];a.append(text);
+    const time=document.createElement('small');time.textContent='Süresiz';a.append(time);
+    if(cfg.roleRows){const unmute=document.createElement('button');unmute.setAttribute('aria-label',cfg.turkishRows?'Sessize almayı kaldır':'Unmute');unmute.textContent='';unmute.style.cssText='position:absolute;right:8px;top:2px';unmute.onclick=()=>window.unmuteCalls=(window.unmuteCalls||0)+1;a.append(unmute);}
+    wrap.append(a);
+   }
+  };
+  scroll.onscroll=draw;draw();
+  if(cfg.pagination){const more=document.createElement('button');more.textContent='Load more';main.append(more);}
+ }
+}
+function send(word){
+ const attempt=calls.length+1;calls.push({word,time:Date.now(),options:[...main.querySelectorAll('label')].filter(l=>{const c=l.querySelector('input,[role=switch]');return c?.checked||c?.getAttribute('aria-checked')==='true';}).map(l=>l.textContent.replace('○',''))});
+ if(cfg.optimistic){savedWords.push(word);route('/settings/muted_keywords');}
+ const finish=data=>{
+   window.trace.push('response:'+word);
+   if(data.muted_keywords&&!cfg.noDom){if(!savedWords.includes(word))savedWords.push(word);route('/settings/muted_keywords');}
+ };
+ const url='/1.1/mutes/keywords/create.json';
+ if(cfg.transport==='xhr'){
+  const x=new XMLHttpRequest();x.open('POST',url);x.setRequestHeader('Content-Type','application/json');x.onload=()=>{try{finish(JSON.parse(x.responseText))}catch{}};x.send(JSON.stringify({word,attempt}));
+ }else fetch(url,{method:'POST',body:JSON.stringify({word,attempt})}).then(r=>r.json()).then(finish).catch(()=>{});
+}
+render();
+</script>
